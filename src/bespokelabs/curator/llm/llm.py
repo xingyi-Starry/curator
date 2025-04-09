@@ -17,6 +17,7 @@ from bespokelabs.curator.llm.prompt_formatter import PromptFormatter
 from bespokelabs.curator.log import add_file_handler, logger
 from bespokelabs.curator.request_processor._factory import _RequestProcessorFactory
 from bespokelabs.curator.request_processor.config import BackendParamsType
+from bespokelabs.curator.request_processor.event_loop import run_in_event_loop
 
 if TYPE_CHECKING:
     from dataset import Dataset
@@ -234,12 +235,11 @@ class LLM:
         metadata_db.store_metadata(metadata_dict)
 
         if batch_cancel:
-            from bespokelabs.curator.request_processor.batch.openai_batch_request_processor import OpenAIBatchRequestProcessor
-
-            if not isinstance(self._request_processor, OpenAIBatchRequestProcessor):
+            if not hasattr(self._request_processor, "cancel_batches"):
                 raise ValueError("batch_cancel can only be used with batch mode")
 
-            dataset = self._request_processor.cancel_batches()
+            run_in_event_loop(self._request_processor.cancel_batches(working_dir=run_cache_dir, dataset=dataset, prompt_formatter=self.prompt_formatter))
+            return dataset
         else:
             parse_func_hash = _get_function_hash(self.prompt_formatter.parse_func)
             dataset = self._request_processor.run(
