@@ -335,7 +335,11 @@ def test_batch_resume(temp_working_dir, mock_dataset):
 
 
 @pytest.mark.parametrize("temp_working_dir", (_BATCH_BACKENDS), indirect=True)
-def test_batch_cancel(caplog, temp_working_dir, mock_dataset):
+def test_batch_cancel(
+    caplog,
+    temp_working_dir,
+    mock_dataset,
+):
     temp_working_dir, backend, vcr_config = temp_working_dir
     with vcr_config.use_cassette("batch_cancel.yaml"):
         with patch("bespokelabs.curator.request_processor.event_loop.run_in_event_loop") as mocked_run_loop:
@@ -362,7 +366,7 @@ def test_batch_cancel(caplog, temp_working_dir, mock_dataset):
         _reload_batch_patch_deps()
         logger = "bespokelabs.curator.request_processor.batch.base_batch_request_processor"
         with caplog.at_level(logging.INFO, logger=logger):
-            helper.create_basic(temp_working_dir, mock_dataset, batch=True, backend=backend, batch_cancel=True, auto_confirm=True)
+            helper.create_basic(temp_working_dir, mock_dataset, batch=True, backend=backend, batch_cancel=True)
             resume_msg = "Cancelling batches"
             assert resume_msg in caplog.text
 

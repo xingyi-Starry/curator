@@ -204,7 +204,11 @@ class LLM:
             if not hasattr(self._request_processor, "cancel_batches"):
                 raise ValueError("batch_cancel can only be used with batch mode")
 
-            run_in_event_loop(self._request_processor.cancel_batches(working_dir=run_cache_dir, dataset=dataset, prompt_formatter=self.prompt_formatter))
+            run_in_event_loop(
+                self._request_processor.cancel_batches(
+                    working_dir=run_cache_dir, dataset=dataset, prompt_formatter=self.prompt_formatter, auto_confirm=batch_cancel_auto_confirm
+                )
+            )
             return dataset
 
         # We convert from iterable to Dataset because Dataset has random access via row_idx
