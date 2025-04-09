@@ -171,7 +171,7 @@ def test_polled_batch_gemini(temp_working_dir, mock_dataset):
 
 @pytest.mark.parametrize("temp_working_dir", ([{"integration": "gemini"}]), indirect=True)
 def test_batch_cancel(caplog, temp_working_dir, mock_dataset):
-    temp_working_dir, backend, _ = temp_working_dir
+    temp_working_dir, _, _ = temp_working_dir
 
     with patch("vertexai.batch_prediction.BatchPredictionJob.submit") as mocked_batch_job:
         with patch("google.cloud.aiplatform.BatchPredictionJob", new=_create_mock_batch_job()):
@@ -210,6 +210,8 @@ def test_batch_cancel(caplog, temp_working_dir, mock_dataset):
                                     working_dir=temp_working_dir,
                                 )
 
+                            patch.stop()
+                            _reload_batch_patch_deps()
                             logger = "bespokelabs.curator.request_processor.batch.base_batch_request_processor"
                             with caplog.at_level(logging.INFO, logger=logger):
                                 prompter(mock_dataset, working_dir=temp_working_dir, batch_cancel=True)

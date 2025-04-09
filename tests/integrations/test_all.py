@@ -358,6 +358,8 @@ def test_batch_cancel(caplog, temp_working_dir, mock_dataset):
         assert len(tracker.submitted_batches) == 1
         assert len(tracker.downloaded_batches) == 0
 
+        patch.stopall()
+        _reload_batch_patch_deps()
         logger = "bespokelabs.curator.request_processor.batch.base_batch_request_processor"
         with caplog.at_level(logging.INFO, logger=logger):
             helper.create_basic(temp_working_dir, mock_dataset, batch=True, backend=backend, batch_cancel=True)
