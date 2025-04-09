@@ -170,6 +170,7 @@ class LLM:
         dataset: Optional[Iterable] = None,
         working_dir: str = None,
         batch_cancel: bool = False,
+        batch_cancel_auto_confirm: bool = False,
     ) -> "Dataset":
         """Apply structured completions in parallel to a dataset using specified model and prompts.
 
@@ -177,6 +178,8 @@ class LLM:
             dataset (Iterable): A dataset consisting of a list of items to apply completions
             working_dir (str): The working directory to save the requests.jsonl, responses.jsonl, and dataset.arrow files.
             batch_cancel (bool): Whether to cancel the batch if it is running
+            batch_cancel_auto_confirm (bool): Whether we should automatically run batch cancellation without explicit user confirmation (for testing)
+
         Returns:
             Iterable: A list of structured outputs from the completions
         """

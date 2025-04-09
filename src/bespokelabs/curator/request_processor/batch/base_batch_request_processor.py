@@ -736,11 +736,17 @@ class BaseBatchRequestProcessor(BaseRequestProcessor):
 
         return response_file
 
-    async def cancel_batches(self, working_dir, dataset, prompt_formatter):
+    async def cancel_batches(self, working_dir, dataset, prompt_formatter, auto_confirm=False):
         """Cancel all currently submitted batches.
 
         Attempts to cancel all batches that are currently in submitted state.
         Handles cases where no batches are submitted.
+
+        Args:
+            working_dir: Directory containing batch files
+            dataset: Dataset containing requests
+            prompt_formatter: Formatter for prompts
+            auto_confirm: Whether to automatically confirm cancellation (for testing)
 
         Side Effects:
             - Attempts to cancel all submitted batches concurrently
@@ -761,6 +767,13 @@ class BaseBatchRequestProcessor(BaseRequestProcessor):
         if self.tracker.n_submitted_batches == 0:
             logger.warning("No batches to be cancelled, but cancel_batches=True.")
             return
+
+        if not auto_confirm:
+            confirmation = input("Are you sure you want to cancel all submitted batches? (y/n): ").lower()
+            if confirmation != "y":
+                logger.info("Batch cancellation aborted by user.")
+                return
+
         logger.info("You set cancel_batches=True. Cancelling batches and returning the original dataset without responses.")
         tasks = [self.cancel_batch(batch) for batch in self.tracker.submitted_batches.values()]
         await asyncio.gather(*tasks)
