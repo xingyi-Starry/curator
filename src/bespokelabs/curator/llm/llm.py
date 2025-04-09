@@ -180,9 +180,7 @@ class LLM:
         Returns:
             Iterable: A list of structured outputs from the completions
         """
-        # We convert from iterable to Dataset because Dataset has random access via row_idx
-        if dataset:
-            dataset = _convert_to_dataset(dataset)
+        dataset_hash = dataset._fingerprint if dataset is not None else xxh64("").hexdigest()
 
         if working_dir is None:
             curator_cache_dir = os.environ.get(
@@ -192,10 +190,23 @@ class LLM:
         else:
             curator_cache_dir = working_dir
 
-        dataset_hash = dataset._fingerprint if dataset is not None else xxh64("").hexdigest()
-
         disable_cache = os.getenv("CURATOR_DISABLE_CACHE", "").lower() in ["true", "1"]
         fingerprint = self._hash_fingerprint(dataset_hash, disable_cache)
+
+        run_cache_dir = os.path.join(curator_cache_dir, fingerprint)
+        os.makedirs(run_cache_dir, exist_ok=True)
+        add_file_handler(run_cache_dir)
+
+        if batch_cancel:
+            if not hasattr(self._request_processor, "cancel_batches"):
+                raise ValueError("batch_cancel can only be used with batch mode")
+
+            run_in_event_loop(self._request_processor.cancel_batches(working_dir=run_cache_dir, dataset=dataset, prompt_formatter=self.prompt_formatter))
+            return dataset
+
+        # We convert from iterable to Dataset because Dataset has random access via row_idx
+        if dataset:
+            dataset = _convert_to_dataset(dataset)
 
         metadata_db_path = os.path.join(curator_cache_dir, "metadata.db")
         metadata_db = MetadataDB(metadata_db_path)
@@ -219,10 +230,6 @@ class LLM:
             "batch_mode": self.batch_mode,
         }
 
-        run_cache_dir = os.path.join(curator_cache_dir, fingerprint)
-        os.makedirs(run_cache_dir, exist_ok=True)
-        add_file_handler(run_cache_dir)
-
         existing_session_id = metadata_db.get_existing_session_id(metadata_dict["run_hash"])
         existing_viewer_sync = metadata_db.check_existing_hosted_sync(metadata_dict["run_hash"])
         if not existing_viewer_sync and existing_session_id:
@@ -234,20 +241,13 @@ class LLM:
         metadata_dict["is_hosted_viewer_synced"] = False
         metadata_db.store_metadata(metadata_dict)
 
-        if batch_cancel:
-            if not hasattr(self._request_processor, "cancel_batches"):
-                raise ValueError("batch_cancel can only be used with batch mode")
-
-            run_in_event_loop(self._request_processor.cancel_batches(working_dir=run_cache_dir, dataset=dataset, prompt_formatter=self.prompt_formatter))
-            return dataset
-        else:
-            parse_func_hash = _get_function_hash(self.prompt_formatter.parse_func)
-            dataset = self._request_processor.run(
-                dataset=dataset,
-                working_dir=run_cache_dir,
-                parse_func_hash=parse_func_hash,
-                prompt_formatter=self.prompt_formatter,
-            )
+        parse_func_hash = _get_function_hash(self.prompt_formatter.parse_func)
+        dataset = self._request_processor.run(
+            dataset=dataset,
+            working_dir=run_cache_dir,
+            parse_func_hash=parse_func_hash,
+            prompt_formatter=self.prompt_formatter,
+        )
 
         if existing_session_id is not None and existing_viewer_sync is False:
             msg = (

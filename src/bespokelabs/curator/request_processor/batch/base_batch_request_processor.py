@@ -752,7 +752,6 @@ class BaseBatchRequestProcessor(BaseRequestProcessor):
         self.total_requests = len(dataset) if dataset is not None else 1
 
         self.semaphore = asyncio.Semaphore(self.max_concurrent_batch_operations)
-        self._batch_objects_file_lock = asyncio.Lock()
         self.batch_objects_file = os.path.join(working_dir, "batch_objects.jsonl")
 
         generic_request_files = self.create_request_files(dataset)
