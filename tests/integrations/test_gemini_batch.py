@@ -214,6 +214,6 @@ def test_batch_cancel(caplog, temp_working_dir, mock_dataset):
                             _reload_batch_patch_deps()
                             logger = "bespokelabs.curator.request_processor.batch.base_batch_request_processor"
                             with caplog.at_level(logging.INFO, logger=logger):
-                                prompter(mock_dataset, working_dir=temp_working_dir, batch_cancel=True, auto_confirm=True)
+                                prompter(mock_dataset, working_dir=temp_working_dir, batch_cancel=True, batch_cancel_auto_confirm=True)
                                 resume_msg = "Cancelling batches"
                                 assert resume_msg in caplog.text
