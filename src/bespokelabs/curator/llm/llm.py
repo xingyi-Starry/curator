@@ -183,6 +183,10 @@ class LLM:
         Returns:
             Iterable: A list of structured outputs from the completions
         """
+        # We convert from iterable to Dataset because Dataset has random access via row_idx
+        if dataset:
+            dataset = _convert_to_dataset(dataset)
+
         dataset_hash = dataset._fingerprint if dataset is not None else xxh64("").hexdigest()
 
         if working_dir is None:
@@ -210,10 +214,6 @@ class LLM:
                 )
             )
             return dataset
-
-        # We convert from iterable to Dataset because Dataset has random access via row_idx
-        if dataset:
-            dataset = _convert_to_dataset(dataset)
 
         metadata_db_path = os.path.join(curator_cache_dir, "metadata.db")
         metadata_db = MetadataDB(metadata_db_path)
