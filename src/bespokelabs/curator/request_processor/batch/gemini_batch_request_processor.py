@@ -480,15 +480,18 @@ class GeminiBatchRequestProcessor(BaseBatchRequestProcessor):
         """
         async with self.semaphore:
             batch_object = await self.retrieve_batch(batch)
-            if batch_object.status == "ended":
-                logger.warning(f"Batch {batch.id} is already ended, cannot cancel")
+            if batch_object.is_finished:
+                logger.warning(f"Batch {batch.id} is either already cancelled or completed, cannot cancel")
                 return batch_object
             try:
                 job = self._get_batch_job_object(batch.id)
                 # TODO: check if delete or cancel
                 job.cancel()
-                logger.info(f"Successfully cancelled batch: {batch.id}")
-                return batch_object
+                logger.info(
+                    f"Cancellation request sent for batch: {batch.id}. The Gemini Batch API does not"
+                    " immediately update us with the success status of the request,"
+                    " so please double-check your dashboard at https://console.cloud.google.com/vertex-ai/batch-predictions."
+                )
             except Exception as e:
                 error_msg = str(e)
                 logger.error(f"Failed to cancel batch {batch.id}: {error_msg}")

@@ -433,7 +433,7 @@ class OpenAIBatchRequestProcessor(BaseBatchRequestProcessor, OpenAIRequestMixin)
                 responses.append(raw_response)
         return responses
 
-    async def cancel_batch(self, batch: GenericBatch) -> int:
+    async def cancel_batch(self, batch: GenericBatch) -> GenericBatch:
         """Cancel a running batch job.
 
         Attempts to cancel a batch that hasn't completed yet. Handles cases
@@ -453,14 +453,18 @@ class OpenAIBatchRequestProcessor(BaseBatchRequestProcessor, OpenAIRequestMixin)
         """
         async with self.semaphore:
             batch_object = await self.retrieve_batch(batch)
-            if batch_object.status == "completed":
-                logger.warning(f"Batch {batch.id} is already completed, cannot cancel")
-                return 0
+            if batch_object.is_finished:
+                logger.warning(f"Batch {batch.id} is either already cancelled or completed, cannot cancel")
+                return batch_object
             try:
-                await self.client.batches.cancel(batch.id)
-                logger.info(f"Successfully cancelled batch: {batch.id}")
-                return 0
+                response = await self.client.batches.cancel(batch.id)
+                if not response.cancelling_at:
+                    raise ValueError(
+                        "Cancellation request sent but cancellation was not successfully initiated by OpenAI backend. Response returned: {response}"
+                    )
+                logger.info(f"Successfully canceled batch {batch.id}.")
+                return batch_object
             except Exception as e:
                 error_msg = str(e)
                 logger.error(f"Failed to cancel batch {batch.id}: {error_msg}")
-                return -1
+                return batch_object

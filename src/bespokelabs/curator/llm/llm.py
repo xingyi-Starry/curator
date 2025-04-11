@@ -204,7 +204,7 @@ class LLM:
         os.makedirs(run_cache_dir, exist_ok=True)
         add_file_handler(run_cache_dir)
 
-        if batch_cancel:
+        if batch_cancel and self.batch_mode:
             if not hasattr(self._request_processor, "cancel_batches"):
                 raise ValueError("batch_cancel can only be used with batch mode")
 
@@ -214,6 +214,8 @@ class LLM:
                 )
             )
             return dataset
+        elif batch_cancel:
+            logger.warning("You set batch_cancel=True but you're not in batch mode. Ignoring batch_cancel.")
 
         metadata_db_path = os.path.join(curator_cache_dir, "metadata.db")
         metadata_db = MetadataDB(metadata_db_path)

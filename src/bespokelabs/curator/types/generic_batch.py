@@ -43,6 +43,10 @@ class GenericBatch(BaseModel):
         "json_encoders": {datetime.datetime: lambda dt: dt.isoformat()},
     }
 
+    @property
+    def is_finished(self):
+        return self.status == GenericBatchStatus.FINISHED.value
+
 
 class BaseState(Enum):
     """Base enum class for defining state constants with a helper method to verify if a given value exists."""

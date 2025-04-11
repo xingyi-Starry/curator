@@ -356,12 +356,16 @@ class AnthropicBatchRequestProcessor(BaseBatchRequestProcessor):
         async with self.semaphore:
             batch_object = await self.retrieve_batch(batch)
 
-            if batch_object.status == "ended":
-                logger.warning(f"Batch {batch.id} is already ended, cannot cancel")
+            if batch_object.is_finished:
+                logger.warning(f"Batch {batch.id} is either already cancelled or completed, cannot cancel")
                 return batch_object
             try:
-                await self.client.messages.batches.cancel(batch.id)
-                logger.info(f"Successfully cancelled batch: {batch.id}")
+                response = await self.client.messages.batches.cancel(batch.id)
+                if not response.cancel_initiated_at:
+                    raise ValueError(
+                        "Cancellation request sent but cancellation was not successfully initiated by Anthropic backend. Response returned: {response}"
+                    )
+                logger.info(f"Successfully canceled batch {batch.id}.")
                 return batch_object
             except Exception as e:
                 error_msg = str(e)
