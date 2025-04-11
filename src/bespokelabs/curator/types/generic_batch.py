@@ -45,6 +45,7 @@ class GenericBatch(BaseModel):
 
     @property
     def is_finished(self):
+        """Returns whether a batch is finished."""
         return self.status == GenericBatchStatus.FINISHED.value
 
 
