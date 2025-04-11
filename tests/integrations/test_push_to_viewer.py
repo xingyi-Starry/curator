@@ -7,6 +7,7 @@ from bespokelabs.curator.utils import push_to_viewer
 
 def test_smoke(mock_dataset):
     vcr_path = "tests/integrations/common_fixtures"
+    os.environ["CURATOR_VIEWER"] = "true"
     mode = os.environ.get("VCR_MODE")
     vcr_config = vcr.VCR(
         serializer="yaml",
