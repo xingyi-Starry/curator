@@ -260,3 +260,21 @@ def create_multimodal_llm(batch=False, batch_check_interval=1, model="gpt-4o-min
         input_type=input_type,
     )
     return prompter
+
+
+def assert_all_requests_played(cassette, exclude_litellm_cost_request=True):
+    played_keys = set(cassette.play_counts.keys())
+    unplayed_indices = [i for i in range(len(cassette.requests)) if i not in played_keys]
+    # Exclude LiteLLM calls by default since these are flaky.
+    if exclude_litellm_cost_request:
+        unplayed_indices = [
+            i
+            for i in unplayed_indices
+            if "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json" not in cassette.requests[i].uri
+        ]
+
+    if len(unplayed_indices) > 0:
+        error_str = "The following requests aren't played: "
+        for unplayed_idx in unplayed_indices:
+            error_str += f"index: {unplayed_idx}, request_uri: {cassette.requests[unplayed_idx].uri}."
+        assert cassette.all_played, f"All requests must be replayed to pass the test. {error_str}"

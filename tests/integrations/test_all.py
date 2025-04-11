@@ -4,6 +4,7 @@ import hashlib
 import importlib
 import json
 import logging
+import os
 import signal
 from io import StringIO
 from unittest.mock import patch
@@ -340,6 +341,9 @@ def test_batch_cancel(
     temp_working_dir,
     mock_dataset,
 ):
+    os.environ["CURATOR_VIEWER"] = "false"
+    os.environ["HOSTED_CURATOR_VIEWER"] = "false"
+
     temp_working_dir, backend, vcr_config = temp_working_dir
     with vcr_config.use_cassette("batch_cancel.yaml") as cassette:
         with patch("bespokelabs.curator.request_processor.event_loop.run_in_event_loop") as mocked_run_loop:
@@ -368,15 +372,7 @@ def test_batch_cancel(
         with caplog.at_level(logging.INFO, logger=logger):
             helper.create_basic(temp_working_dir, mock_dataset, batch=True, backend=backend, batch_cancel=True)
             resume_msg = "Cancelling batches"
-
-            played_keys = set(cassette.play_counts.keys())
-            unplayed_indices = [i for i in range(len(cassette.requests)) if i not in played_keys]
-
-            if len(unplayed_indices) > 0:
-                print("The following requests aren't played: ")
-                for unplayed_idx in unplayed_indices:
-                    print(f"index: {unplayed_idx}, request_uri: {cassette.requests[unplayed_idx].uri}.")
-                assert cassette.all_played, "All requests must be replayed to pass the test."
+            helper.assert_all_requests_played(cassette)
 
             assert resume_msg in caplog.text
 
