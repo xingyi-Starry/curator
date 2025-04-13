@@ -352,6 +352,8 @@ class BaseOnlineRequestProcessor(BaseRequestProcessor, ABC):
                     generic_request = GenericRequest.model_validate_json(line)
 
                     if generic_request.original_row_idx in completed_request_ids:
+                        if self._semaphore:
+                            self._semaphore.release()
                         continue
 
                     # Unpack multimodal prompts
@@ -368,7 +370,7 @@ class BaseOnlineRequestProcessor(BaseRequestProcessor, ABC):
                     if status_tracker.max_tokens_per_minute is not None:
                         token_estimate = self.estimate_total_tokens(request.generic_request.messages)
                     else:
-                        token_estimate = None
+                        token_estimate = _TokenUsage()  # Empty
 
                     # Wait for capacity if needed
                     while not status_tracker.has_capacity(token_estimate):
@@ -409,7 +411,7 @@ class BaseOnlineRequestProcessor(BaseRequestProcessor, ABC):
                     if status_tracker.max_tokens_per_minute is not None:
                         token_estimate = self.estimate_total_tokens(retry_request.generic_request.messages)
                     else:
-                        token_estimate = None
+                        token_estimate = _TokenUsage()  # Empty
 
                     attempt_number = self.config.max_retries - retry_request.attempts_left
                     logger.debug(
