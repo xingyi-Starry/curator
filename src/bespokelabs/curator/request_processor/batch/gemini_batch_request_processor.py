@@ -86,7 +86,6 @@ class GeminiBatchRequestProcessor(BaseBatchRequestProcessor):
     def __init__(self, config: BatchRequestProcessorConfig) -> None:
         """Initialize the GeminiBatchRequestProcessor."""
         super().__init__(config)
-
         self._initialize_cloud()
 
     def _initialize_cloud(self):
