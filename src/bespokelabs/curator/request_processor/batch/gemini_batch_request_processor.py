@@ -247,25 +247,42 @@ class GeminiBatchRequestProcessor(BaseBatchRequestProcessor):
             content = message["content"]
 
             # Primary Path: Handle the multimodal dictionary from curator
-            if isinstance(content, dict) and ("texts" in content or "images" in content):
+            if isinstance(content, dict):
                 # Add all text parts from the 'texts' list
                 for text_item in content.get("texts", []):
                     if isinstance(text_item, str):
                         parts.append({"text": text_item})
 
                 # Add all image parts from the 'images' list
-                for image_item in content.get("images", []):
+                for file_item in content.get("images", []):
                     # image_item is a dict like {'url': '...', 'mime_type': '...'}
-                    url = image_item.get("url")
+                    url = file_item.get("url")
                     if not url:
                         continue  # Skip if there's no URL
 
-                    mime_type = image_item.get("mime_type")
+                    mime_type = file_item.get("mime_type")
                     if not mime_type:
                         # Fallback to guessing the mime type if not provided
                         mime_type, _ = mimetypes.guess_type(url)
                         if not mime_type:
-                            logger.warning(f"Could not determine MIME type for {url}. Defaulting to 'image/png'.")
+                            logger.debug(f"Could not determine MIME type for {url}. Defaulting to 'image/png'.")
+                            mime_type = "image/png"
+
+                    parts.append({"fileData": {"fileUri": url, "mimeType": mime_type}})
+
+                # Add other file parts from the 'files' list
+                for file_item in content.get("files", []):
+                    # file_item is a dict like {'url': '...', 'mime_type': '...'}
+                    url = file_item.get("url")
+                    if not url:
+                        continue  # Skip if there's no URL
+
+                    mime_type = file_item.get("mime_type")
+                    if not mime_type:
+                        # Fallback to guessing the mime type if not provided
+                        mime_type, _ = mimetypes.guess_type(url)
+                        if not mime_type:
+                            logger.debug(f"Could not determine MIME type for {url}. Defaulting to 'image/png'.")
                             mime_type = "image/png"
 
                     parts.append({"fileData": {"fileUri": url, "mimeType": mime_type}})
@@ -283,24 +300,20 @@ class GeminiBatchRequestProcessor(BaseBatchRequestProcessor):
         # with a 'parts' list. The role is typically 'user'.
         request_object = {"contents": [{"role": "user", "parts": parts}]}
 
+        # Determine if we need to add generationConfig
+        if generic_request.response_format or self.config.generation_params:
+            request_object["generationConfig"] = {}
+
         if generic_request.response_format:
-            # Ensure generationConfig exists before trying to update it
-            if "generationConfig" not in request_object:
-                request_object["generationConfig"] = {}
-            request_object["generationConfig"].update(
-                {
-                    "responseMimeType": "application/json",
-                    "responseSchema": _response_format_to_json(self.prompt_formatter.response_format),
-                }
-            )
+            request_object["generationConfig"].update({
+                "responseMimeType": "application/json",
+                "responseSchema": _response_format_to_json(self.prompt_formatter.response_format),
+            })
 
         if self.config.generation_params:
             gen_params = copy.deepcopy(self.config.generation_params)
             safety_settings = gen_params.pop("safetySettings", None)
-            if "generationConfig" in request_object:
-                request_object["generationConfig"].update(gen_params)
-            elif gen_params:
-                request_object.update({"generationConfig": gen_params})
+            request_object["generationConfig"].update(gen_params)
 
             if safety_settings:
                 request_object["safetySettings"] = safety_settings
