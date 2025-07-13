@@ -675,14 +675,32 @@ class BatchStatusTracker(BaseModel):
         return "\n".join(status_lines)
 
     # TODO: Add update cost as well for batch request processor
-    def update_token_and_cost(self, token_usage: _TokenUsage, cost: float):
+    def update_token_and_cost(self, token_usage: _TokenUsage, cost: Optional[float] = None):
         """Update statistics with token usage and cost information."""
         if token_usage:
-            self.total_prompt_tokens += token_usage.input
-            self.total_completion_tokens += token_usage.output
-            self.total_tokens += token_usage.total
-        if cost:
+            input_tokens = token_usage.input or 0
+            output_tokens = token_usage.output or 0
+            total_tokens = token_usage.total or (input_tokens + output_tokens)
+            
+            self.total_prompt_tokens += input_tokens
+            self.total_completion_tokens += output_tokens
+            self.total_tokens += total_tokens
+            
+            # 直接通过token数据计算成本
+            if self.input_cost_per_million is not None and self.output_cost_per_million is not None:
+                calculated_cost = (
+                    (input_tokens * self.input_cost_per_million / 1_000_000) +
+                    (output_tokens * self.output_cost_per_million / 1_000_000)
+                )
+                self.total_cost += calculated_cost
+            elif cost is not None:
+                # 如果无法通过token计算成本，但提供了cost参数，则使用它
+                self.total_cost += cost
+                
+        elif cost is not None:
+            # 如果没有token数据但有cost数据，直接更新cost
             self.total_cost += cost
+            
         self.update_display()
 
     def model_dump_json(self, **kwargs) -> str:
