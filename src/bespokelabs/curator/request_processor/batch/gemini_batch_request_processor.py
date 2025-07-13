@@ -313,10 +313,14 @@ class GeminiBatchRequestProcessor(BaseBatchRequestProcessor):
         if self.config.generation_params:
             gen_params = copy.deepcopy(self.config.generation_params)
             safety_settings = gen_params.pop("safetySettings", None)
+            system_instruction = gen_params.pop("systemInstruction", None)
             request_object["generationConfig"].update(gen_params)
 
             if safety_settings:
                 request_object["safetySettings"] = safety_settings
+
+            if system_instruction:
+                request_object["systemInstruction"] = system_instruction
 
         return {
             "request": request_object,
