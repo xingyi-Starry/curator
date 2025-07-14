@@ -305,10 +305,12 @@ class GeminiBatchRequestProcessor(BaseBatchRequestProcessor):
             request_object["generationConfig"] = {}
 
         if generic_request.response_format:
-            request_object["generationConfig"].update({
-                "responseMimeType": "application/json",
-                "responseSchema": _response_format_to_json(self.prompt_formatter.response_format),
-            })
+            request_object["generationConfig"].update(
+                {
+                    "responseMimeType": "application/json",
+                    "responseSchema": _response_format_to_json(self.prompt_formatter.response_format),
+                }
+            )
 
         if self.config.generation_params:
             gen_params = copy.deepcopy(self.config.generation_params)
@@ -388,9 +390,15 @@ class GeminiBatchRequestProcessor(BaseBatchRequestProcessor):
                 total=usage.get("totalTokenCount", 0),
             )
 
-            response_message, response_errors = self.prompt_formatter.parse_response_message(response_message_raw)
+            try:
+                response_message, response_errors = self.prompt_formatter.parse_response_message(response_message_raw)
 
-            cost = self._cost_processor.cost(model=self.config.model, prompt=str(generic_request.messages), completion=response_message_raw)
+            except Exception as e:
+                response_message = ""
+                logger.error(f"Failed to parse response message: {e}")
+                response_errors = [f"Failed to parse response message: {e}"]
+
+            # cost = self._cost_processor.cost(model=self.config.model, prompt=str(generic_request.messages), completion=response_message_raw)
             if self.config.return_completions_object:
                 response_message_raw = response_body
 

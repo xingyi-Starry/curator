@@ -343,6 +343,9 @@ class BaseRequestProcessor(ABC):
         except (json.JSONDecodeError, ValidationError):
             logger.warning("Skipping response due to error parsing response message into response format")
             return
+        except Exception as e:
+            logger.warning(f"Skipping response due to error parsing response message into response format: {e}")
+            return
 
         # parse_func can return a single row or a list of rows
         responses = None

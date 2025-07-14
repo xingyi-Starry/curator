@@ -200,6 +200,6 @@ class PromptFormatter:
                 response_message = json.loads(response_message)
             except json.JSONDecodeError:
                 logger.warning(f"Failed to parse response as JSON: {response_message}, skipping this response.")
-                response_message = None
+                response_message = {"enhanced_text": "error", "stage_tag": ""}
                 response_errors = [f"Failed to parse response as JSON: {response_message}"]
         return response_message, response_errors
